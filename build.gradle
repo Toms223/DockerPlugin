@@ -1,0 +1,81 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+apply plugin: 'com.github.johnrengelman.shadow'
+
+group = 'com.dorckercord'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    gradlePluginPortal()
+    mavenCentral()
+    maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
+    }
+}
+
+dependencies {
+    compileOnly "net.md-5:bungeecord-api:1.20-R0.1-SNAPSHOT"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    testImplementation "org.junit.platform:junit-platform-suite-engine:1.10.1"
+    testImplementation(platform('org.junit:junit-bom:5.10.2'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+def targetJavaVersion = 8
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(targetJavaVersion)
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    expand props
+    filteringCharset 'UTF-8'
+    filesMatching('bungee.yml') {
+        expand props
+    }
+}
+
+buildscript {
+    ext.kotlin_version = '2.0.0-Beta4' // Updated Kotlin version
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.johnrengelman:shadow:8.1.1'
+    }
+}
+
+kotlin {
+    jvmToolchain(8)
+}
+
+// Configuration for Shadow Jar plugin
+shadowJar {
+    mergeServiceFiles()
+    manifest {
+        attributes 'Main-Class': 'com.dorckercord.dockerplugin.DockerPlugin' // Change 'your.main.Class' to your main class
+    }
+    // Optionally, you can exclude some files if necessary
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

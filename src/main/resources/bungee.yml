@@ -1,0 +1,3 @@
+name: DockerPlugin
+version: '${version}'
+main: com.dorckercord.dockerplugin.DockerPlugin
