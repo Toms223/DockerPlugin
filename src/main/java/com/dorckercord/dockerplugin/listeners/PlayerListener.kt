@@ -6,22 +6,41 @@ import net.md_5.bungee.api.event.PostLoginEvent
 import net.md_5.bungee.api.plugin.Listener
 import net.md_5.bungee.event.EventHandler
 import java.net.InetSocketAddress
-import java.util.logging.Level
+import java.util.*
 import java.util.logging.Logger
 
-class PlayerListener(private val logger: Logger, private val proxy: ProxyServer): Listener {
+class PlayerListener(private val proxy: ProxyServer): Listener {
     companion object{
-        val dockerClient = DockerCordAPIClient("localhost:3030")
+        val dockerClient = DockerCordAPIClient("dockercord:3030")
     }
     @EventHandler
-    fun onPlayerLogin(event: PostLoginEvent){
+    fun onPlayerJoin(event: PostLoginEvent){
         val playerUUID = event.player.uniqueId
-        if(dockerClient.players.none { uuid -> uuid == playerUUID }){
+        if(!checkPlayerExists(playerUUID)){
             dockerClient.registerPlayer(playerUUID)
-            val instance = dockerClient.createAndStartInstance(playerUUID)
-            val serverInfo = proxy.constructServerInfo("$playerUUID", InetSocketAddress(instance.playerUUID.toString(),25565),"", false)
-            proxy.servers["$playerUUID"] = serverInfo
-            event.player.connect(proxy.servers["$playerUUID"])
         }
+        if(!checkInstanceExists(playerUUID)){
+            dockerClient.createInstance(playerUUID)
+        }
+        val instance = dockerClient.getInstance(playerUUID) ?: throw ClassNotFoundException()
+        if(!instance.running){
+            dockerClient.startInstance(instance)
+        }
+        val address = InetSocketAddress(instance.playerUUID.toString(),25565)
+        val serverInfo = proxy.constructServerInfo(
+            instance.playerUUID.toString(),
+            address,
+            "${event.player.name}'s Server",
+            false)
+        proxy.servers[instance.playerUUID.toString()] = serverInfo
+        event.player.connect(serverInfo)
+    }
+
+    private fun checkInstanceExists(playerUUID: UUID): Boolean{
+        return dockerClient.getInstance(playerUUID) != null
+    }
+
+    private fun checkPlayerExists(playerUUID: UUID): Boolean {
+        return dockerClient.getPlayer(playerUUID) != null
     }
 }

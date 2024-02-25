@@ -1,0 +1,40 @@
+version: '3'
+services:
+  bungeecord:
+    image: itzg/bungeecord
+    environment:
+      TYPE: BUNGEECORD
+      SERVERS: "lobby=lobby:25565"
+      MOTD: "Welcome to our BungeeCord server!"
+      FORCE_DEFAULT_SERVER: "true"
+    volumes:
+      - ./plugins:/plugins
+      - ./config.yml:/config/config.yml
+    ports:
+      - "25565:25577"
+    networks:
+      - "db-to-api"
+      - "minecraft"
+  lobby:
+    image: itzg/minecraft-server
+    container_name: lobby
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      MEMORY: "1G"
+      USE_AIKAR_FLAGS: "true"
+      VERSION: "1.20.4"
+      ONLINE_MODE: "FALSE"
+    volumes:
+      - ./data:/data
+      - ./spigot.yml:/data/spigot.yml
+    expose:
+      - "25565"
+    restart: unless-stopped
+    networks:
+      - "minecraft"
+networks:
+  minecraft:
+    driver: bridge
+  db-to-api:
+    driver: bridge
